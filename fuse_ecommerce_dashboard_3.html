@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fuse Appliances — Ecommerce Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f2f8;
+    --muted: #8b90a8;
+    --accent: #1eb8c4;
+    --accent2: #3266ad;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --paid-search: #3b82f6;
+    --organic: #ef4444;
+    --direct: #f59e0b;
+    --referral: #22c55e;
+    --email: #8b5cf6;
+    --paid-social: #06b6d4;
+    --display: #f97316;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; color: #fff;
+  }
+  .header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .date-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+  .refresh-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: opacity 0.2s;
+  }
+  .refresh-btn:hover { opacity: 0.85; }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* LAYOUT */
+  .main { padding: 28px 32px; max-width: 1600px; margin: 0 auto; }
+  .section-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 16px;
+    margin-top: 32px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* LOADING STATE */
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; z-index: 999;
+    transition: opacity 0.4s;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--muted); }
+
+  /* ERROR BANNER */
+  .error-banner {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: #fca5a5;
+    margin-bottom: 24px;
+    display: none;
+  }
+  .error-banner.show { display: block; }
+
+
+
+  /* KPI CARDS */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi-card.blue::before { background: var(--paid-search); }
+  .kpi-card.teal::before { background: var(--accent); }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.amber::before { background: var(--amber); }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .kpi-value { font-size: 28px; font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .kpi-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 11px; padding: 2px 7px; border-radius: 4px; margin-top: 8px;
+  }
+  .kpi-badge.up { background: rgba(34,197,94,0.15); color: var(--green); }
+  .kpi-badge.down { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  /* TWO COL */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* CHART CARDS */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .chart-card-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 16px; }
+  .chart-card-title span { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
+  .chart-wrap { position: relative; }
+
+  /* DONUT GRID */
+  .donut-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .donut-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .donut-card-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+  .donut-wrap { position: relative; height: 120px; margin: 0 auto 12px; max-width: 120px; }
+  .donut-legend { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+  .donut-leg { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .donut-leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* FUNNEL TABLE */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .table-header h3 { font-size: 13px; font-weight: 500; color: var(--text); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 14px;
+    text-align: right;
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  thead th:first-child { text-align: left; }
+  tbody td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; }
+  tbody td:first-child { text-align: left; font-family: 'DM Sans', sans-serif; color: var(--muted); font-size: 12px; }
+  tbody tr:last-child td { border-bottom: none; font-weight: 600; color: var(--text); border-top: 1px solid var(--border2); }
+  tbody tr:hover td { background: rgba(255,255,255,0.03); }
+  .ch-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 8px; }
+
+  /* FUNNEL FLOW */
+  .funnel-flow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    align-items: start;
+  }
+  .funnel-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 10px;
+    text-align: center;
+    position: relative;
+  }
+  .funnel-step-label { font-size: 10px; color: var(--muted); margin-bottom: 6px; line-height: 1.3; }
+  .funnel-step-val { font-size: 20px; font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; }
+  .funnel-step-pct { font-size: 11px; color: var(--accent); margin-top: 6px; }
+  .funnel-arrow { text-align: center; color: var(--muted); font-size: 20px; display: flex; align-items: center; justify-content: center; padding-top: 30px; }
+
+  /* LEGEND */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .leg-sq { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* FOOTER */
+  .footer { padding: 24px 32px; text-align: center; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); margin-top: 40px; }
+
+  /* DATE CONTROLS */
+  .date-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ctrl-select {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .ctrl-select:focus { border-color: var(--accent); }
+  .ctrl-select option { background: var(--surface2); }
+  .ctrl-date {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    color-scheme: dark;
+  }
+  .ctrl-date:focus { border-color: var(--accent); }
+  .date-sep { font-size: 12px; color: var(--muted); }
+  .custom-dates { display: flex; align-items: center; gap: 6px; }
+  .custom-dates.hidden { display: none; }
+  .compare-btn {
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .compare-btn.active { background: rgba(30,184,196,0.15); border-color: var(--accent); color: var(--accent); }
+  .compare-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .compare-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; padding: 2px 7px; border-radius: 4px;
+    background: rgba(30,184,196,0.12); color: var(--accent);
+    margin-left: 6px; white-space: nowrap;
+  }
+  .skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Connecting to GA4...</div>
+</div>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">F</div>
+    <h1>Fuse Appliances — Ecommerce Overview</h1>
+  </div>
+  <div class="header-right">
+    <div class="status-dot" id="statusDot" style="background:var(--amber);box-shadow:0 0 6px var(--amber);"></div>
+    <div class="date-badge" id="dateRange">Not connected</div>
+    <div class="date-controls">
+      <select id="dateRangeSelect" class="ctrl-select" onchange="onPresetChange()">
+        <option value="30daysAgo">Last 30 Days</option>
+        <option value="7daysAgo">Last 7 Days</option>
+        <option value="90daysAgo">Last 90 Days</option>
+        <option value="thisMonth">Month to Date</option>
+        <option value="yearToDate">Year to Date</option>
+        <option value="lastMonth">Last Month</option>
+        <option value="custom">Custom Range...</option>
+      </select>
+      <div id="customDates" class="custom-dates hidden">
+        <input type="date" id="customStart" class="ctrl-date" onchange="onCustomDateChange()">
+        <span class="date-sep">→</span>
+        <input type="date" id="customEnd" class="ctrl-date" onchange="onCustomDateChange()">
+      </div>
+      <button class="compare-btn" id="compareBtn" onclick="toggleCompare()">⇄ Compare</button>
+      <div id="compareDates" class="custom-dates hidden">
+        <select id="comparePreset" class="ctrl-select" onchange="onComparePresetChange()">
+          <option value="previousPeriod">Previous Period</option>
+          <option value="previousYear">Previous Year</option>
+          <option value="custom">Custom...</option>
+        </select>
+        <div id="compareCustom" class="custom-dates hidden">
+          <input type="date" id="compareStart" class="ctrl-date">
+          <span class="date-sep">→</span>
+          <input type="date" id="compareEnd" class="ctrl-date">
+        </div>
+      </div>
+      <button class="refresh-btn" onclick="loadData()">↻ Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- KPI ROW -->
+  <div class="section-title">Overview</div>
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card blue"><div class="kpi-label">Total Sessions</div><div class="kpi-value skeleton" style="height:32px;width:120px;"> </div></div>
+    <div class="kpi-card teal"><div class="kpi-label">Ecommerce Revenue</div><div class="kpi-value skeleton" style="height:32px;width:140px;"> </div></div>
+    <div class="kpi-card green"><div class="kpi-label">Transactions</div><div class="kpi-value skeleton" style="height:32px;width:80px;"> </div></div>
+    <div class="kpi-card amber"><div class="kpi-label">Conversion Rate</div><div class="kpi-value skeleton" style="height:32px;width:80px;"> </div></div>
+  </div>
+
+  <!-- SOURCE PERFORMANCE -->
+  <div class="section-title">Source Performance</div>
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-card-title">Ecommerce Events by Channel</div>
+      <div class="legend" id="pieLegend"></div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="pieChart" role="img" aria-label="Ecommerce events by channel">Loading...</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">% Purchases / Adds to Cart <span>by channel</span></div>
+      <div class="chart-wrap" style="height:230px;"><canvas id="barChart" role="img" aria-label="Purchase rate by channel">Loading...</canvas></div>
+    </div>
+  </div>
+
+  <!-- FUNNEL DONUTS -->
+  <div class="section-title" style="margin-top:24px;">Funnel by Channel</div>
+  <div class="donut-grid" id="donutGrid">
+    <div class="donut-card"><div class="donut-card-title">Engaged Sessions</div><div class="donut-wrap"><canvas id="d1"></canvas></div></div>
+    <div class="donut-card"><div class="donut-card-title">View Item</div><div class="donut-wrap"><canvas id="d2"></canvas></div></div>
+    <div class="donut-card"><div class="donut-card-title">Adds to Cart</div><div class="donut-wrap"><canvas id="d3"></canvas></div></div>
+    <div class="donut-card"><div class="donut-card-title">View Cart</div><div class="donut-wrap"><canvas id="d4"></canvas></div></div>
+    <div class="donut-card"><div class="donut-card-title">Begin Checkout</div><div class="donut-wrap"><canvas id="d5"></canvas></div></div>
+    <div class="donut-card"><div class="donut-card-title">Add Shipping Info</div><div class="donut-wrap"><canvas id="d6"></canvas></div></div>
+    <div class="donut-card"><div class="donut-card-title">Add Payment Info</div><div class="donut-wrap"><canvas id="d7"></canvas></div></div>
+    <div class="donut-card"><div class="donut-card-title">Purchases</div><div class="donut-wrap"><canvas id="d8"></canvas></div></div>
+  </div>
+
+  <!-- CHECKOUT TABLE -->
+  <div class="section-title" style="margin-top:24px;">Checkout Funnel Highlights</div>
+  <div class="table-card">
+    <table id="funnelTable">
+      <thead>
+        <tr>
+          <th>Channel</th>
+          <th>Add to Carts</th>
+          <th>Add to Cart Value</th>
+          <th>Add Ons</th>
+          <th>Add On Value</th>
+          <th>Purchases</th>
+          <th>Purchase Value</th>
+        </tr>
+      </thead>
+      <tbody id="funnelTableBody">
+        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);">Enter your Property ID above to load data</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FUNNEL FLOW -->
+  <div class="section-title" style="margin-top:24px;">Checkout Funnel Flow</div>
+  <div class="funnel-flow" id="funnelFlow">
+    <div class="funnel-step"><div class="funnel-step-label">View Item</div><div class="funnel-step-val" id="ff1">—</div><div class="funnel-step-pct" id="ffp1"></div></div>
+    <div class="funnel-step"><div class="funnel-step-label">Add to Cart</div><div class="funnel-step-val" id="ff2">—</div><div class="funnel-step-pct" id="ffp2"></div></div>
+    <div class="funnel-step"><div class="funnel-step-label">View Cart</div><div class="funnel-step-val" id="ff3">—</div><div class="funnel-step-pct" id="ffp3"></div></div>
+    <div class="funnel-step"><div class="funnel-step-label">Begin Checkout</div><div class="funnel-step-val" id="ff4">—</div><div class="funnel-step-pct" id="ffp4"></div></div>
+    <div class="funnel-step"><div class="funnel-step-label">Add Shipping</div><div class="funnel-step-val" id="ff5">—</div><div class="funnel-step-pct" id="ffp5"></div></div>
+    <div class="funnel-step"><div class="funnel-step-label">Add Payment</div><div class="funnel-step-val" id="ff6">—</div><div class="funnel-step-pct" id="ffp6"></div></div>
+    <div class="funnel-step"><div class="funnel-step-label">Purchases</div><div class="funnel-step-val" id="ff7">—</div><div class="funnel-step-pct" id="ffp7"></div></div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Fuse Appliances Ecommerce Dashboard · Powered by GA4 Data API · Built by HomeSource Systems
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+// STEP 1: Paste your Google Apps Script Web App URL here after deploying
+const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+
+// Channel colors
+const CHANNEL_COLORS = {
+  'Paid Search':    '#3b82f6',
+  'Organic Search': '#ef4444',
+  'Direct':         '#f59e0b',
+  'Referral':       '#22c55e',
+  'Email':          '#8b5cf6',
+  'Paid Social':    '#06b6d4',
+  'Display':        '#f97316',
+  'Organic Social': '#84cc16',
+  'Unassignable':   '#6b7280',
+  '(other)':        '#9ca3af',
+};
+
+function getColor(channel) {
+  return CHANNEL_COLORS[channel] || '#6b7280';
+}
+
+let pieChartInst, barChartInst;
+const donutInsts = {};
+
+// ─── LOAD DATA ────────────────────────────────────────────────────────────────
+const GA4_PROPERTY_ID = '325623747';
+let compareActive = false;
+
+function toggleCompare() {
+  compareActive = !compareActive;
+  const btn = document.getElementById('compareBtn');
+  const panel = document.getElementById('compareDates');
+  btn.classList.toggle('active', compareActive);
+  panel.classList.toggle('hidden', !compareActive);
+}
+
+function onPresetChange() {
+  const val = document.getElementById('dateRangeSelect').value;
+  const custom = document.getElementById('customDates');
+  if (val === 'custom') {
+    custom.classList.remove('hidden');
+    // Default to last 30 days
+    const end = new Date(); const start = new Date();
+    start.setDate(start.getDate() - 30);
+    document.getElementById('customEnd').value = toISO(end);
+    document.getElementById('customStart').value = toISO(start);
+  } else {
+    custom.classList.add('hidden');
+    loadData();
+  }
+}
+
+function onCustomDateChange() {
+  const s = document.getElementById('customStart').value;
+  const e = document.getElementById('customEnd').value;
+  if (s && e && s <= e) loadData();
+}
+
+function onComparePresetChange() {
+  const val = document.getElementById('comparePreset').value;
+  document.getElementById('compareCustom').classList.toggle('hidden', val !== 'custom');
+}
+
+function getDateRange() {
+  const preset = document.getElementById('dateRangeSelect').value;
+  const today = new Date();
+  let startDate, endDate;
+
+  if (preset === 'custom') {
+    startDate = document.getElementById('customStart').value;
+    endDate   = document.getElementById('customEnd').value;
+    if (!startDate || !endDate) return null;
+  } else if (preset === 'yearToDate') {
+    startDate = `${today.getFullYear()}-01-01`;
+    endDate   = toISO(today);
+  } else if (preset === 'thisMonth') {
+    startDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
+    endDate   = toISO(today);
+  } else if (preset === 'lastMonth') {
+    const d = new Date(today.getFullYear(), today.getMonth(), 0);
+    const s = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    startDate = toISO(s); endDate = toISO(d);
+  } else {
+    // e.g. "30daysAgo"
+    const days = parseInt(preset);
+    const s = new Date(); s.setDate(s.getDate() - days);
+    startDate = toISO(s); endDate = toISO(today);
+  }
+  return { startDate, endDate };
+}
+
+function getCompareDateRange(primary) {
+  if (!compareActive) return null;
+  const preset = document.getElementById('comparePreset').value;
+  if (preset === 'custom') {
+    const s = document.getElementById('compareStart').value;
+    const e = document.getElementById('compareEnd').value;
+    return (s && e) ? { startDate: s, endDate: e } : null;
+  }
+  const pStart = new Date(primary.startDate);
+  const pEnd   = new Date(primary.endDate);
+  const diffMs = pEnd - pStart;
+  const diffDays = Math.round(diffMs / 86400000) + 1;
+
+  if (preset === 'previousPeriod') {
+    const cEnd   = new Date(pStart); cEnd.setDate(cEnd.getDate() - 1);
+    const cStart = new Date(cEnd);   cStart.setDate(cStart.getDate() - diffDays + 1);
+    return { startDate: toISO(cStart), endDate: toISO(cEnd) };
+  } else { // previousYear
+    const cStart = new Date(pStart); cStart.setFullYear(cStart.getFullYear()-1);
+    const cEnd   = new Date(pEnd);   cEnd.setFullYear(cEnd.getFullYear()-1);
+    return { startDate: toISO(cStart), endDate: toISO(cEnd) };
+  }
+}
+
+function toISO(d) { return d.toISOString().slice(0,10); }
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+async function loadData() {
+  const propId = GA4_PROPERTY_ID;
+  const dr = getDateRange();
+  if (!dr) return;
+
+  const compareDr = getCompareDateRange(dr);
+  const dateLabel = `${fmtDate(dr.startDate)} – ${fmtDate(dr.endDate)}`;
+  const compareLabel = compareDr ? `${fmtDate(compareDr.startDate)} – ${fmtDate(compareDr.endDate)}` : null;
+
+  if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    const demo = getDemoData();
+    demo.dateLabel = dateLabel;
+    if (compareDr) {
+      demo.compareLabel = compareLabel;
+      demo.compareKpis = { sessions:48200, engagedSessions:28400, revenue:58920.50, avgOrderValue:2946.03, transactions:20, addToCarts:1740, convRate:'2.17' };
+    } else {
+      demo.compareKpis = null;
+      demo.compareLabel = null;
+    }
+    renderAll(demo);
+    return;
+  }
+
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  hideError();
+
+  try {
+    let url = `${APPS_SCRIPT_URL}?propertyId=${propId}&startDate=${dr.startDate}&endDate=${dr.endDate}`;
+    if (compareDr) url += `&compareStart=${compareDr.startDate}&compareEnd=${compareDr.endDate}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    data.dateLabel = dateLabel;
+    data.compareLabel = compareLabel;
+    renderAll(data);
+  } catch (err) {
+    showError(`Failed to load data: ${err.message}`);
+    renderAll(getDemoData());
+  } finally {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  }
+}
+
+// ─── RENDER ALL ───────────────────────────────────────────────────────────────
+function renderAll(data) {
+  updateHeader(data);
+  renderKPIs(data.kpis, data.compareKpis, data.compareLabel);
+  renderPieChart(data.channelEvents);
+  renderBarChart(data.purchaseRate);
+  renderDonuts(data.funnelByChannel);
+  renderTable(data.checkoutTable);
+  renderFunnelFlow(data.funnelFlow);
+  document.getElementById('statusDot').style.cssText = 'width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;animation:pulse 2s infinite;';
+}
+
+function updateHeader(data) {
+  let label = data.dateLabel || 'Last 30 Days';
+  if (data.compareLabel) label += ` <span class="compare-badge">vs ${data.compareLabel}</span>`;
+  document.getElementById('dateRange').innerHTML = label;
+}
+
+// ─── KPIs ─────────────────────────────────────────────────────────────────────
+function renderKPIs(kpis, compare, compareLabel) {
+  function delta(curr, prev) {
+    if (!prev || prev === 0) return '';
+    const pct = ((curr - prev) / Math.abs(prev) * 100).toFixed(1);
+    const up = pct >= 0;
+    return `<div class="kpi-badge ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(pct)}% vs prior</div>`;
+  }
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = `
+    <div class="kpi-card blue">
+      <div class="kpi-label">Total Sessions</div>
+      <div class="kpi-value">${fmt(kpis.sessions)}</div>
+      <div class="kpi-sub">Engaged: ${fmt(kpis.engagedSessions)}</div>
+      ${compare ? delta(kpis.sessions, compare.sessions) : ''}
+    </div>
+    <div class="kpi-card teal">
+      <div class="kpi-label">Ecommerce Revenue</div>
+      <div class="kpi-value">${fmtCurrency(kpis.revenue)}</div>
+      <div class="kpi-sub">Avg order: ${fmtCurrency(kpis.avgOrderValue)}</div>
+      ${compare ? delta(kpis.revenue, compare.revenue) : ''}
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Transactions</div>
+      <div class="kpi-value">${fmt(kpis.transactions)}</div>
+      <div class="kpi-sub">Add to carts: ${fmt(kpis.addToCarts)}</div>
+      ${compare ? delta(kpis.transactions, compare.transactions) : ''}
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-label">Conversion Rate</div>
+      <div class="kpi-value">${kpis.convRate}%</div>
+      <div class="kpi-sub">${compare ? `Prior: ${compare.convRate}%` : 'Purchase / Begin checkout'}</div>
+      ${compare ? delta(parseFloat(kpis.convRate), parseFloat(compare.convRate)) : ''}
+    </div>
+  `;
+}
+
+// ─── PIE CHART ────────────────────────────────────────────────────────────────
+function renderPieChart(channelData) {
+  if (pieChartInst) pieChartInst.destroy();
+  const labels = channelData.map(d => d.channel);
+  const values = channelData.map(d => d.events);
+  const colors = labels.map(getColor);
+
+  // Legend
+  const legend = document.getElementById('pieLegend');
+  legend.innerHTML = labels.map((l,i) =>
+    `<span class="leg-item"><span class="leg-sq" style="background:${colors[i]}"></span>${l}</span>`
+  ).join('');
+
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  pieChartInst = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString()} (${((ctx.parsed/values.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` }
+      }}
+    }
+  });
+}
+
+// ─── BAR CHART ────────────────────────────────────────────────────────────────
+function renderBarChart(rateData) {
+  if (barChartInst) barChartInst.destroy();
+  const labels = rateData.map(d => d.channel);
+  const values = rateData.map(d => parseFloat(d.rate));
+  const colors = labels.map(getColor);
+  const ctx = document.getElementById('barChart').getContext('2d');
+  barChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 4, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(2)}%` }}},
+      scales: {
+        x: { ticks: { color: '#8b90a8', font: { size: 10 }, maxRotation: 35 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#8b90a8', font: { size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+}
+
+// ─── DONUTS ───────────────────────────────────────────────────────────────────
+function renderDonuts(funnelByChannel) {
+  const stages = [
+    { id: 'd1', key: 'engagedSessions' },
+    { id: 'd2', key: 'viewItem' },
+    { id: 'd3', key: 'addToCart' },
+    { id: 'd4', key: 'viewCart' },
+    { id: 'd5', key: 'beginCheckout' },
+    { id: 'd6', key: 'addShipping' },
+    { id: 'd7', key: 'addPayment' },
+    { id: 'd8', key: 'purchases' },
+  ];
+  stages.forEach(({ id, key }) => {
+    if (donutInsts[id]) donutInsts[id].destroy();
+    const data = funnelByChannel[key] || [];
+    const labels = data.map(d => d.channel);
+    const values = data.map(d => d.value);
+    const colors = labels.map(getColor);
+    const ctx = document.getElementById(id).getContext('2d');
+    donutInsts[id] = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '65%',
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: ctx => ` ${ctx.label}: ${((ctx.parsed/values.reduce((a,b)=>a+b,0))*100).toFixed(1)}%` }
+        }}
+      }
+    });
+  });
+}
+
+// ─── TABLE ────────────────────────────────────────────────────────────────────
+function renderTable(rows) {
+  const tbody = document.getElementById('funnelTableBody');
+  if (!rows || !rows.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);">No data</td></tr>'; return; }
+  tbody.innerHTML = rows.map((r, i) => {
+    const isTotal = i === rows.length - 1;
+    const dot = !isTotal ? `<span class="ch-dot" style="background:${getColor(r.channel)}"></span>` : '';
+    return `<tr>
+      <td>${dot}${r.channel}</td>
+      <td>${fmt(r.addToCarts)}</td>
+      <td>${fmtCurrency(r.addToCartValue)}</td>
+      <td>${fmt(r.addOns)}</td>
+      <td>${fmtCurrency(r.addOnValue)}</td>
+      <td>${fmt(r.purchases)}</td>
+      <td>${fmtCurrency(r.purchaseValue)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── FUNNEL FLOW ──────────────────────────────────────────────────────────────
+function renderFunnelFlow(flow) {
+  if (!flow) return;
+  const steps = ['ff1','ff2','ff3','ff4','ff5','ff6','ff7'];
+  const pcts = ['ffp1','ffp2','ffp3','ffp4','ffp5','ffp6','ffp7'];
+  const vals = [flow.viewItem, flow.addToCart, flow.viewCart, flow.beginCheckout, flow.addShipping, flow.addPayment, flow.purchases];
+  const labels = ['% View Item / Engaged', '% Add to Cart / View Item', '% View Cart / Add to Cart', '% Begin Checkout / Add to Cart', '% Add Shipping / Begin Checkout', '% Add Payment / Begin Checkout', '% Purchase / Begin Checkout'];
+  vals.forEach((v, i) => {
+    document.getElementById(steps[i]).textContent = fmt(v);
+  });
+  // Compute conversion rates
+  const rates = [
+    flow.viewItem && flow.engagedSessions ? ((flow.viewItem/flow.engagedSessions)*100).toFixed(2) : null,
+    flow.addToCart && flow.viewItem ? ((flow.addToCart/flow.viewItem)*100).toFixed(2) : null,
+    flow.viewCart && flow.addToCart ? ((flow.viewCart/flow.addToCart)*100).toFixed(2) : null,
+    flow.beginCheckout && flow.addToCart ? ((flow.beginCheckout/flow.addToCart)*100).toFixed(2) : null,
+    flow.addShipping && flow.beginCheckout ? ((flow.addShipping/flow.beginCheckout)*100).toFixed(2) : null,
+    flow.addPayment && flow.beginCheckout ? ((flow.addPayment/flow.beginCheckout)*100).toFixed(2) : null,
+    flow.purchases && flow.beginCheckout ? ((flow.purchases/flow.beginCheckout)*100).toFixed(2) : null,
+  ];
+  rates.forEach((r, i) => {
+    const el = document.getElementById(pcts[i]);
+    if (r) el.textContent = r + '%';
+  });
+}
+
+// ─── FORMATTERS ───────────────────────────────────────────────────────────────
+function fmt(n) { if (n == null) return '—'; return Number(n).toLocaleString(); }
+function fmtCurrency(n) { if (n == null) return '—'; return '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+// ─── ERROR HANDLING ───────────────────────────────────────────────────────────
+function showError(msg) { const b = document.getElementById('errorBanner'); b.textContent = msg; b.classList.add('show'); }
+function hideError() { document.getElementById('errorBanner').classList.remove('show'); }
+
+// ─── DEMO DATA ────────────────────────────────────────────────────────────────
+function getDemoData() {
+  return {
+    dateLabel: 'Mar 1, 2026 – Mar 31, 2026',
+    kpis: { sessions: 52840, engagedSessions: 31200, revenue: 66371.38, avgOrderValue: 3017.79, transactions: 22, addToCarts: 1928, convRate: '2.38' },
+    channelEvents: [
+      { channel: 'Paid Social', events: 14200 },
+      { channel: 'Paid Search', events: 11950 },
+      { channel: 'Organic Search', events: 9740 },
+      { channel: 'Direct', events: 6770 },
+      { channel: 'Referral', events: 2870 },
+      { channel: 'Unassignable', events: 1200 },
+      { channel: 'Email', events: 800 },
+      { channel: 'Organic Social', events: 520 },
+    ],
+    purchaseRate: [
+      { channel: 'Email', rate: '2.60' },
+      { channel: 'Direct', rate: '2.34' },
+      { channel: 'Organic Search', rate: '1.11' },
+      { channel: 'Paid Search', rate: '1.05' },
+      { channel: 'Referral', rate: '0.96' },
+      { channel: 'Organic Social', rate: '0.48' },
+      { channel: 'Display', rate: '0.00' },
+      { channel: 'Paid Social', rate: '0.00' },
+    ],
+    funnelByChannel: {
+      engagedSessions: [{ channel:'Paid Search',value:38.9},{ channel:'Organic Search',value:34.7},{ channel:'Direct',value:11.6},{ channel:'Referral',value:8.2},{ channel:'Email',value:6.6}],
+      viewItem: [{ channel:'Paid Search',value:39.2},{ channel:'Organic Search',value:35.3},{ channel:'Direct',value:17.7},{ channel:'Referral',value:4.9},{ channel:'Email',value:2.9}],
+      addToCart: [{ channel:'Paid Search',value:44.6},{ channel:'Organic Search',value:33.7},{ channel:'Referral',value:10.8},{ channel:'Direct',value:7.9},{ channel:'Email',value:3.0}],
+      viewCart: [{ channel:'Paid Search',value:43.8},{ channel:'Organic Search',value:34.3},{ channel:'Direct',value:10.1},{ channel:'Referral',value:8.5},{ channel:'Email',value:3.3}],
+      beginCheckout: [{ channel:'Paid Search',value:37.6},{ channel:'Organic Search',value:33.9},{ channel:'Direct',value:11.4},{ channel:'Referral',value:9.8},{ channel:'Email',value:7.3}],
+      addShipping: [{ channel:'Paid Search',value:44.2},{ channel:'Organic Search',value:28.8},{ channel:'Direct',value:13.5},{ channel:'Referral',value:8.1},{ channel:'Email',value:5.4}],
+      addPayment: [{ channel:'Paid Search',value:43.0},{ channel:'Organic Search',value:27.8},{ channel:'Direct',value:17.8},{ channel:'Referral',value:7.4},{ channel:'Email',value:4.0}],
+      purchases: [{ channel:'Paid Search',value:40.0},{ channel:'Organic Search',value:31.8},{ channel:'Direct',value:13.6},{ channel:'Referral',value:9.1},{ channel:'Email',value:5.5}],
+    },
+    checkoutTable: [
+      { channel:'Paid Search', addToCarts:860, addToCartValue:1333788.10, addOns:235, addOnValue:35418.74, purchases:9, purchaseValue:10887.09 },
+      { channel:'Organic Search', addToCarts:630, addToCartValue:1061866.63, addOns:182, addOnValue:25889.75, purchases:7, purchaseValue:30247.35 },
+      { channel:'Direct', addToCarts:128, addToCartValue:256354.06, addOns:30, addOnValue:5665.00, purchases:3, purchaseValue:3898.20 },
+      { channel:'Email', addToCarts:77, addToCartValue:43350.87, addOns:25, addOnValue:4293.50, purchases:2, purchaseValue:15829.58 },
+      { channel:'Referral', addToCarts:208, addToCartValue:263864.85, addOns:71, addOnValue:9478.50, purchases:1, purchaseValue:5509.16 },
+      { channel:'Display', addToCarts:9, addToCartValue:44770.56, addOns:0, addOnValue:0, purchases:0, purchaseValue:0 },
+      { channel:'Paid Social', addToCarts:9, addToCartValue:55502.00, addOns:0, addOnValue:0, purchases:0, purchaseValue:0 },
+      { channel:'Grand Total', addToCarts:1928, addToCartValue:3080517.42, addOns:543, addOnValue:80745.49, purchases:22, purchaseValue:66371.38 },
+    ],
+    funnelFlow: { engagedSessions:44581, viewItem:17746, addToCart:1928, viewCart:1200, beginCheckout:924, addShipping:52, addPayment:90, purchases:22 }
+  };
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  loadData();
+});
+</script>
+</body>
+</html>

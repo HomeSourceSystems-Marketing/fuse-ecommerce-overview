@@ -440,7 +440,7 @@
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 // STEP 1: Paste your Google Apps Script Web App URL here after deploying
-const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+const APPS_SCRIPT_URL = 'https://fuse-marketing-dashboard.arann.workers.dev';
 
 // Channel colors
 const CHANNEL_COLORS = {
@@ -571,7 +571,7 @@ async function loadData() {
   const dateLabel = `${fmtDate(dr.startDate)} – ${fmtDate(dr.endDate)}`;
   const compareLabel = compareDr ? `${fmtDate(compareDr.startDate)} – ${fmtDate(compareDr.endDate)}` : null;
 
-  if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+  if (APPS_SCRIPT_URL === 'https://fuse-marketing-dashboard.arann.workers.dev') {
     const demo = getDemoData();
     demo.dateLabel = dateLabel;
     if (compareDr) {
